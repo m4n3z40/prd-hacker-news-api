@@ -1,15 +1,18 @@
 import Fastify from "fastify";
-import fastifyPlugin from "fastify-plugin";
-import { plugin } from "./db/index.js";
+import { plugin as dbPlugin } from "./db/index.js";
+import { plugin as repositoriesPlugin } from "./repositories/index.js";
+import { plugin as routesPlugin } from "./routes/index.js";
 
 const app = Fastify({ logger: true });
 
-app.register(fastifyPlugin(plugin));
+app.register(dbPlugin);
+app.register(repositoriesPlugin);
+app.register(routesPlugin);
 
-app.get('/', async (request, reply) => {
-  app.db.execute('SELECT 1');
+app.get('/liveness', async (_, reply) => {
+  await app.db.execute('SELECT 1');
 
-  reply.send({ hello: 'world' })
+  return reply.send({ status: 'ok' });
 });
 
 export default app;

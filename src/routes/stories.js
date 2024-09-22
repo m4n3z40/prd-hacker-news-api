@@ -1,0 +1,210 @@
+const storySchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'integer' },
+    slug: { type: 'string' },
+    title: { type: 'string' },
+    text: { type: 'string' },
+    domain: { type: 'string' },
+    url: { type: 'string' },
+    score: { type: 'integer' },
+    user_id: { type: 'integer' },
+    by: { type: 'string' },
+    time_ago: { type: 'string' },
+    descendants: { type: 'integer' },
+    parent_id: { type: 'integer' },
+    root_id: { type: 'integer' },
+    root_title: { type: 'string' },
+    kids: {
+      type: 'array',
+      items: { type: 'integer' },
+    },
+    type: { enum: ['post', 'comment', 'job', 'ask', 'show'] },
+    created_at: { type: 'string' },
+  },
+};
+
+const storiesListQuerySchema = {
+  type: 'object',
+  properties: {
+    type: { type: 'string' },
+    by: { type: 'string' },
+    domain: { type: 'string' },
+    title: { type: 'string' },
+    list: { type: 'string' },
+    perPage: { type: 'integer' },
+    page: { type: 'integer' },
+  },
+};
+
+const resultMetaSchema = {
+  type: 'object',
+  properties: {
+    total: { type: 'integer' },
+    page: { type: 'integer' },
+    perPage: { type: 'integer' },
+  },
+};
+
+const storiesListSchema = {
+  type: 'object',
+  properties: {
+    result: {
+      type: 'array',
+      items: storySchema,
+    },
+    meta: resultMetaSchema,
+  },
+};
+
+const storyPathParamsSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'integer' },
+  },
+};
+
+const singleStorySchema = {
+  type: 'object',
+  properties: {
+    result: storySchema,
+  },
+};
+
+const descendantsSchema = {
+  type: 'object',
+  properties: {
+    result: {
+      type: 'object',
+      properties: {
+        stories: {
+          type: 'object',
+          patternProperties: {
+            '^[0-9]+$': storySchema,
+          },
+          additionalProperties: false,
+        },
+        rootKids: {
+          type: 'array',
+          items: { type: 'integer' },
+        },
+      }
+    },
+    meta: resultMetaSchema,
+  },
+};
+
+const errorSchema = {
+  type: 'object',
+  properties: {
+    result: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+      },
+    },
+  },
+};
+
+/**
+ * @param {import('fastify').FastifyInstance} app
+ */
+export default async app => {
+  const getAllStoriesRouteConfig = {
+    schema: {
+      querystring: storiesListQuerySchema,
+      response: {
+        200: storiesListSchema
+      },
+    },
+  };
+
+  app.get('/stories', getAllStoriesRouteConfig, async (request, reply) => {
+    const { stories: storiesRepo } = app.repositories;
+    const { type, by, domain, title, list, perPage = 30, page = 1 } = request.query;
+
+    const total = await storiesRepo.countAll({ type, by, domain, title });
+
+    if (total === 0) {
+      return reply.send({ result: [], meta: { total, page, perPage } });
+    }
+
+    const stories = await storiesRepo.getAll({ type, by, domain, title, list, perPage, page });
+
+    return reply.send({ result: stories, meta: { total, page, perPage } });
+  });
+
+  app.get('/comments', getAllStoriesRouteConfig, async (request, reply) => {
+    const { stories: storiesRepo } = app.repositories;
+    const { perPage = 30, page = 1 } = request.query;
+
+    const total = await storiesRepo.countAll({ type: 'comment' });
+
+    if (total === 0) {
+      return reply.send({ result: [], meta: { total, page, perPage } });
+    }
+
+    const comments = await storiesRepo.getAllComments({ perPage, page });
+
+    return reply.send({ result: comments, meta: { total, page, perPage } });
+  });
+
+  const getStoryRouteConfig = {
+    schema: {
+      params: storyPathParamsSchema,
+      response: {
+        200: singleStorySchema,
+        404: errorSchema,
+      },
+    },
+  };
+
+  app.get('/stories/:id', getStoryRouteConfig, async (request, reply) => {
+    const { id } = request.params;
+    const { stories: storiesRepo } = app.repositories;
+
+    const story = await storiesRepo.getById(id);
+
+    if (!story) {
+      return reply.code(404).send({ result: { message: 'Story not found' } });
+    }
+
+    return reply.send({ result: story });
+  });
+
+  const descendantsRouteConfig = {
+    schema: {
+      params: storyPathParamsSchema,
+      response: {
+        200: descendantsSchema,
+        404: errorSchema,
+      },
+    },
+  };
+
+  app.get('/stories/:id/descendants', descendantsRouteConfig, async (request, reply) => {
+    const { id } = request.params;
+    const { stories: storiesRepo } = app.repositories;
+
+    const parentStory = await storiesRepo.getById(id);
+
+    if (!parentStory) {
+      return reply.code(404).send({ result: { message: 'Story not found' } });
+    }
+
+    if (parentStory.descendants === 0) {
+      return reply.send({ result: { stories: {}, rootKids: [] }, meta: { total: 0 } });
+    }
+
+    const stories = await storiesRepo.getDescendantsByParentId(id);
+
+    const storiesMap = stories.reduce((acc, story) => {
+      acc[story.id] = story;
+      return acc;
+    }, {});
+
+    const rootKids = parentStory.kids;
+
+    return reply.send({ result: { stories: storiesMap, rootKids }, meta: { total: stories.length } });
+  });
+};

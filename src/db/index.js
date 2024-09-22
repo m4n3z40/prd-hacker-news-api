@@ -1,4 +1,5 @@
 import { createClient } from '@libsql/client';
+import fastifyPlugin from "fastify-plugin";
 
 let db = null;
 
@@ -15,6 +16,6 @@ function getDb() {
 
 export default getDb;
 
-export async function plugin(app) {
+export const plugin = fastifyPlugin(async (app) => {
   app.decorate('db', getDb());
-}
+});
