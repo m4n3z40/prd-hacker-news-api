@@ -1,0 +1,14 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+.env
+.env.production
+
+# Mac
+.DS_Store
+
+# DB
+phn.db
+phn.db-shm
+phn.db-wal

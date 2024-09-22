@@ -1,0 +1,45 @@
+Enum user_role {
+  user
+  admin
+}
+
+Enum story_type {
+  post
+  comment
+  ask
+  show
+  job
+}
+
+Table users {
+  id integer [primary key, increment]
+  username varchar [not null, unique]
+  password varchar [not null]
+  role user_role [not null]
+  created_at timestamp [not null]
+}
+
+Table stories {
+  id integer [primary key, increment]
+  parent_id integer
+  title varchar [not null]
+  text text [note: 'Content of the post']
+  domain varchar
+  url varchar
+  type story_type [not null]
+  user_id integer [not null]
+  created_at timestamp [not null]
+}
+
+Table story_votes {
+  id integer [primary key, increment]
+  story_id integer [not null]
+  user_id integer [not null]
+  weight decimal [not null, default: 1]
+  created_at timestamp [not null]
+}
+
+Ref: stories.user_id > users.id
+Ref: stories.id < stories.parent_id
+Ref: story_votes.story_id > stories.id
+Ref: story_votes.user_id > users.id
