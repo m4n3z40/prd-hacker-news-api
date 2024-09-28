@@ -1,30 +1,28 @@
 import createStory from "../utils/createStory.js";
 
 export default class StoriesRepository {
+  /**
+   * @type {import('@libsql/client').Client}
+   */
   #db;
 
-  constructor(db) {
+  /**
+   *
+   * @param {{ db: import('@libsql/client').Client }} config
+   */
+  constructor({ db }) {
     this.#db = db;
   }
 
   async create({ title = null, url = null, text = null, type, user_id, parent_id = null }) {
     const domain = url ? new URL(url).hostname : null;
 
-    const { lastInsertRowid } = await this.#db.execute({
-      sql: 'INSERT INTO stories (title, url, domain, text, type, user_id, parent_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      args: [title || '', url, domain, text, type, user_id, parent_id],
+    const { rows: [lastInsertedRow] } = await this.#db.execute({
+      sql: 'INSERT INTO stories (title, url, domain, text, type, user_id, parent_id) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *',
+      args: [title || '', url, domain, text || '', type, user_id, parent_id],
     });
 
-    return {
-      id: lastInsertRowid,
-      title,
-      url,
-      domain,
-      text,
-      type,
-      user_id,
-      parent_id,
-    };
+    return createStory(lastInsertedRow);
   }
 
   async getAll({ type = 'post', by, domain, title, list = 'new', perPage = 30, page = 1 } = {}) {

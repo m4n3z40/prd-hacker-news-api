@@ -12,8 +12,8 @@ export const plugin = fastifyPlugin(async (app) => {
   }
 
   app.decorate('repositories', {
-    stories: new Stories(app.db),
-    users: new Users(app.db),
-    votes: new Votes(app.db),
+    stories: new Stories({ db: app.db }),
+    users: new Users({ db: app.db }),
+    votes: new Votes({ db: app.db }),
   });
 });

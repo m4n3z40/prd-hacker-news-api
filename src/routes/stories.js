@@ -1,3 +1,25 @@
+const newStorySchema = {
+  type: 'object',
+  required: ['title', 'type', 'user_id'],
+  oneOf: [
+    { required: ['url'], not: { required: ['text'] } },
+    { required: ['text'], not: { required: ['url'] } },
+    { required: ['url', 'text'] },
+  ],
+  properties: {
+    title: { type: 'string' },
+    url: {
+      type: 'string',
+      format: 'uri',
+      pattern: "^https?://"
+    },
+    text: { type: 'string' },
+    type: { enum: ['post', 'comment', 'job', 'ask', 'show'] },
+    user_id: { type: 'integer' },
+    parent_id: { type: 'integer' },
+  },
+};
+
 const storySchema = {
   type: 'object',
   properties: {
@@ -6,7 +28,11 @@ const storySchema = {
     title: { type: 'string' },
     text: { type: 'string' },
     domain: { type: 'string' },
-    url: { type: 'string' },
+    url: {
+      type: 'string',
+      format: 'uri',
+      pattern: "^https?://"
+    },
     score: { type: 'integer' },
     user_id: { type: 'integer' },
     by: { type: 'string' },
@@ -110,6 +136,24 @@ const errorSchema = {
  * @param {import('fastify').FastifyInstance} app
  */
 export default async app => {
+  const createStoryRouteConfig = {
+    schema: {
+      body: newStorySchema,
+      response: {
+        200: singleStorySchema,
+      },
+    },
+  };
+
+  app.post('/stories', createStoryRouteConfig, async (request, reply) => {
+    const { stories: storiesRepo } = app.repositories;
+    const { title, url, text, type, user_id, parent_id } = request.body;
+
+    const story = await storiesRepo.create({ title, url, text, type, user_id, parent_id });
+
+    return reply.send({ result: story });
+  });
+
   const getAllStoriesRouteConfig = {
     schema: {
       querystring: storiesListQuerySchema,
@@ -206,5 +250,35 @@ export default async app => {
     const rootKids = parentStory.kids;
 
     return reply.send({ result: { stories: storiesMap, rootKids }, meta: { total: stories.length } });
+  });
+
+  const rootRouteConfig = {
+    schema: {
+      params: storyPathParamsSchema,
+      response: {
+        200: singleStorySchema,
+        404: errorSchema,
+        400: errorSchema,
+      },
+    },
+  };
+
+  app.get('/stories/:id/root', rootRouteConfig, async (request, reply) => {
+    const { id } = request.params;
+    const { stories: storiesRepo } = app.repositories;
+
+    const story = await storiesRepo.getById(id);
+
+    if (!story) {
+      return reply.code(404).send({ result: { message: 'Story not found.' } });
+    }
+
+    if (!story.parent_id) {
+      return reply.code(400).send({ result: { message: 'Story is already the root story.' } });
+    }
+
+    const rootStory = await storiesRepo.getRootByDescendantId(id);
+
+    return reply.send({ result: rootStory });
   });
 };
