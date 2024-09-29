@@ -1,4 +1,5 @@
 import hashPassword from '../utils/hashPassword.js';
+import sql, { empty } from '../utils/sql.js';
 
 export default class UsersRepository {
   /**
@@ -15,28 +16,24 @@ export default class UsersRepository {
   }
 
   async create({ username, password }) {
-    const { rows: [user] } = await this.#db.execute({
-      sql: 'INSERT INTO users (username, password) VALUES (?, ?) RETURNING *',
-      args: [username, hashPassword(password)],
-    });
+    const { rows: [user] } = await this.#db.execute(sql`
+      INSERT INTO users (username, password)
+      VALUES (${username}, ${hashPassword(password)})
+      RETURNING id, username, role, 0 AS karma, created_at
+    `);
 
     return user;
   }
 
-  async getByUsername(username) {
-    const { rows: [user] } = await this.#db.execute({
-      sql: 'SELECT id, username, role, created_at FROM users WHERE username = ?',
-      args: [username],
-    });
-
-    return user || null;
-  }
-
   async getByLoginData({ username, password }) {
-    const { rows: [user] } = await this.#db.execute({
-      sql: 'SELECT id, username, role, created_at FROM users WHERE username = ? AND password = ?',
-      args: [username, hashPassword(password)],
-    });
+    const { rows: [user] } = await this.#db.execute(sql`
+      SELECT u.id, u.username, u.role, COALESCE(SUM(s.weight), 0) AS karma, u.created_at
+      FROM users u
+      LEFT JOIN story_votes s ON s.user_id = u.id
+      WHERE username = ${username}
+      ${password ? sql`AND password = ${hashPassword(password)}` : empty}
+      GROUP BY u.id
+    `);
 
     return user || null;
   }

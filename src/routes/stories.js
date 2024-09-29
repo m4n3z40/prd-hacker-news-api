@@ -69,6 +69,7 @@ const resultMetaSchema = {
     total: { type: 'integer' },
     page: { type: 'integer' },
     perPage: { type: 'integer' },
+    totalPages: { type: 'integer' },
   },
 };
 
@@ -88,6 +89,7 @@ const storyPathParamsSchema = {
   properties: {
     id: { type: 'integer' },
   },
+  required: ['id'],
 };
 
 const singleStorySchema = {
@@ -175,7 +177,10 @@ export default async app => {
 
     const stories = await storiesRepo.getAll({ type, by, domain, title, list, perPage, page });
 
-    return reply.send({ result: stories, meta: { total, page, perPage } });
+    return reply.send({
+      result: stories,
+      meta: { total, page, perPage, totalPages: Math.ceil(total / perPage) }
+    });
   });
 
   app.get('/comments', getAllStoriesRouteConfig, async (request, reply) => {
@@ -190,7 +195,10 @@ export default async app => {
 
     const comments = await storiesRepo.getAllComments({ perPage, page });
 
-    return reply.send({ result: comments, meta: { total, page, perPage } });
+    return reply.send({
+      result: comments,
+      meta: { total, page, perPage, totalPages: Math.ceil(total / perPage) }
+    });
   });
 
   const getStoryRouteConfig = {

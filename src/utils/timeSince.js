@@ -1,4 +1,4 @@
-const simpleInflection = (value, unit) => `${value} ${unit}${value > 1 ? "s" : ""}`;
+const simpleInflection = (value, unit) => `${value} ${unit}${value !== 1 ? "s" : ""}`;
 
 export default function timeSince(date) {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);

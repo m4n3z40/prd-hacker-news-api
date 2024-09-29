@@ -1,4 +1,5 @@
 import createStory from "../utils/createStory.js";
+import sql, { empty, raw } from "../utils/sql.js";
 
 export default class StoriesRepository {
   /**
@@ -17,10 +18,11 @@ export default class StoriesRepository {
   async create({ title = null, url = null, text = null, type, user_id, parent_id = null }) {
     const domain = url ? new URL(url).hostname : null;
 
-    const { rows: [lastInsertedRow] } = await this.#db.execute({
-      sql: 'INSERT INTO stories (title, url, domain, text, type, user_id, parent_id) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *',
-      args: [title || '', url, domain, text || '', type, user_id, parent_id],
-    });
+    const { rows: [lastInsertedRow] } = await this.#db.execute(sql`
+      INSERT INTO stories (title, url, domain, text, type, user_id, parent_id)
+      VALUES (${title || ''}, ${url}, ${domain}, ${text || ''}, ${type}, ${user_id}, ${parent_id})
+      RETURNING *
+    `);
 
     return createStory(lastInsertedRow);
   }
@@ -29,8 +31,8 @@ export default class StoriesRepository {
     const limit = perPage;
     const offset = (page - 1) * limit;
 
-    const { rows: stories } = await this.#db.execute({
-      sql: `SELECT
+    const { rows: stories } = await this.#db.execute(sql`
+      SELECT
         s.*,
         u.username AS by,
         json_group_array(c.id) AS kids,
@@ -47,15 +49,14 @@ export default class StoriesRepository {
       FROM stories s
       JOIN users u ON s.user_id = u.id
       LEFT JOIN stories c ON s.id = c.parent_id
-      WHERE s.type = ?
-      ${by ? 'AND u.username = ?' : ''}
-      ${domain ? 'AND s.domain = ?' : ''}
-      ${title ? 'AND s.title LIKE ?' : ''}
+      WHERE s.type = ${type}
+      ${by ? sql`AND u.username = ${by}` : empty}
+      ${domain ? sql`AND s.domain = ${domain}` : empty}
+      ${title ? sql`AND s.title LIKE ${`%${title}%`}` : empty}
       GROUP BY s.id
-      ORDER BY ${list === 'top' ? 'score DESC, descendants DESC,' : ''} created_at DESC
-      LIMIT ${limit} OFFSET ${offset}`,
-      args: [type, by, domain, title && `%${title}%`].filter(Boolean),
-    });
+      ORDER BY ${list === 'top' ? sql`score DESC, descendants DESC,` : empty} created_at DESC
+      LIMIT ${raw(limit)} OFFSET ${raw(offset)}
+    `);
 
     return stories.map(createStory);
   }
@@ -64,8 +65,8 @@ export default class StoriesRepository {
     const limit = perPage;
     const offset = (page - 1) * limit;
 
-    const { rows: comments } = await this.#db.execute({
-      sql: `WITH comments AS (
+    const { rows: comments } = await this.#db.execute(sql`
+      WITH comments AS (
         SELECT c.*,
         (WITH RECURSIVE parents (id, parent_id) as (
             SELECT sc.id, sc.parent_id
@@ -91,16 +92,15 @@ export default class StoriesRepository {
       LEFT JOIN stories s ON s.parent_id = c.id
       GROUP BY c.id
       ORDER BY c.created_at DESC
-      LIMIT ${limit} OFFSET ${offset}`,
-      args: [],
-    });
+      LIMIT ${raw(limit)} OFFSET ${raw(offset)}
+    `);
 
     return comments.map(createStory);
   }
 
   async getById(id) {
-    const { rows } = await this.#db.execute({
-      sql: `SELECT
+    const { rows: [story] } = await this.#db.execute(sql`
+      SELECT
         s.*,
         u.username AS by,
         json_group_array(c.id) AS kids,
@@ -118,20 +118,19 @@ export default class StoriesRepository {
       JOIN users u ON s.user_id = u.id
       LEFT JOIN stories c ON s.id = c.parent_id
       LEFT JOIN story_votes v ON s.id = v.story_id
-      WHERE s.id = ?
-      GROUP BY s.id`,
-      args: [id],
-    });
+      WHERE s.id = ${id}
+      GROUP BY s.id
+    `);
 
-    return rows[0] ? createStory(rows[0]) : null;
+    return story ? createStory(story) : null;
   }
 
   async getDescendantsByParentId(parentId) {
-    const { rows } = await this.#db.execute({
-      sql: `WITH RECURSIVE descendants (id, parent_id) as (
+    const { rows } = await this.#db.execute(sql`
+      WITH RECURSIVE descendants (id, parent_id) as (
         SELECT s.id, s.parent_id
         FROM stories s
-        WHERE s.parent_id = ?
+        WHERE s.parent_id = ${parentId}
         UNION ALL
         SELECT sc.id, sc.parent_id
         FROM stories sc
@@ -147,19 +146,18 @@ export default class StoriesRepository {
       LEFT JOIN stories c ON s.id = c.parent_id
       LEFT JOIN story_votes v ON s.id = v.story_id
       WHERE s.id IN (SELECT id FROM descendants)
-      GROUP BY s.id`,
-      args: [parentId],
-    });
+      GROUP BY s.id
+    `);
 
     return rows.map(createStory);
   }
 
   async getRootByDescendantId(id) {
-    const { rows } = await this.#db.execute({
-      sql: `WITH RECURSIVE parents (id, parent_id) as (
+    const { rows: [story] } = await this.#db.execute(sql`
+      WITH RECURSIVE parents (id, parent_id) as (
         SELECT sc.id, sc.parent_id
         FROM stories sc
-        WHERE sc.id = ?
+        WHERE sc.id = ${id}
         UNION ALL
         SELECT sp.id, sp.parent_id
         FROM stories sp
@@ -176,25 +174,23 @@ export default class StoriesRepository {
       WHERE s.id IN (
         SELECT id FROM parents WHERE parent_id is NULL
       )
-      GROUP BY s.id`,
-      args: [id],
-    });
+      GROUP BY s.id
+    `);
 
-    return rows[0] ? createStory(rows[0]) : null;
+    return story ? createStory(story) : null;
   }
 
   async countAll({ type = 'post', by, domain, title } = {}) {
-    const { rows } = await this.#db.execute({
-      sql: `SELECT COUNT(s.id) AS count
+    const { rows: [record] } = await this.#db.execute(sql`
+      SELECT COUNT(s.id) AS count
       FROM stories s
       JOIN users u ON s.user_id = u.id
-      WHERE type = ?
-      ${by ? 'AND u.username = ?' : ''}
-      ${domain ? 'AND s.domain = ?' : ''}
-      ${title ? 'AND s.title LIKE ?' : ''}`,
-      args: [type, by, domain, title && `%${title}%`].filter(Boolean),
-    });
+      WHERE type = ${type}
+      ${by ? sql`AND u.username = ${by}` : empty}
+      ${domain ? sql`AND s.domain = ${domain}` : empty}
+      ${title ? sql`AND s.title LIKE ${`%${title}%`}` : empty}
+  `);
 
-    return rows[0] ? rows[0].count : 0;
+    return record ? record.count : 0;
   }
 }
