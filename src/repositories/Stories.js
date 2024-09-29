@@ -15,6 +15,14 @@ export default class StoriesRepository {
     this.#db = db;
   }
 
+  async ready() {
+    const { rows: [result] } = await this.#db.execute(sql`
+      SELECT EXISTS(SELECT * FROM sqlite_master WHERE type='table' AND name='stories') as table_ready;
+    `);
+
+    return result.table_ready === 1;
+  }
+
   async create({ title = null, url = null, text = null, type, user_id, parent_id = null }) {
     const domain = url ? new URL(url).hostname : null;
 

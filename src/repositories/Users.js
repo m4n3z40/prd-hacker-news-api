@@ -15,6 +15,14 @@ export default class UsersRepository {
     this.#db = db;
   }
 
+  async ready() {
+    const { rows: [result] } = await this.#db.execute(sql`
+      SELECT EXISTS(SELECT * FROM sqlite_master WHERE type='table' AND name='users') as table_ready;
+    `);
+
+    return result.table_ready === 1;
+  }
+
   async create({ username, password }) {
     const { rows: [user] } = await this.#db.execute(sql`
       INSERT INTO users (username, password)

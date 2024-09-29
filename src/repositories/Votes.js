@@ -14,6 +14,14 @@ export default class VotesRepository {
     this.#db = db;
   }
 
+  async ready() {
+    const { rows: [result] } = await this.#db.execute(sql`
+      SELECT EXISTS(SELECT * FROM sqlite_master WHERE type='table' AND name='story_votes') as table_ready;
+    `);
+
+    return result.table_ready === 1;
+  }
+
   async create({ user_id, story_id, action = 'up' }) {
     const { rows: [lastInsertedRow] } = await this.#db.execute(sql`
       INSERT INTO story_votes (user_id, story_id, weight)
