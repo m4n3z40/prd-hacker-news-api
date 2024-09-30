@@ -23,7 +23,7 @@ export default class StoriesRepository {
     return result.table_ready === 1;
   }
 
-  async create({ title = null, url = null, text = null, type, user_id, parent_id = null }) {
+  async create({ title, url = null, text, type, user_id, parent_id = null }) {
     const domain = url ? new URL(url).hostname : null;
 
     const { rows: [lastInsertedRow] } = await this.#db.execute(sql`
@@ -35,7 +35,7 @@ export default class StoriesRepository {
     return createStory(lastInsertedRow);
   }
 
-  async getAll({ type = 'post', by, domain, title, list = 'new', perPage = 30, page = 1 } = {}) {
+  async getAll({ type = 'post', by, domain, title, order = 'new', perPage = 30, page = 1 } = {}) {
     const limit = perPage;
     const offset = (page - 1) * limit;
 
@@ -43,7 +43,7 @@ export default class StoriesRepository {
       SELECT
         s.*,
         u.username AS by,
-        json_group_array(c.id) AS kids,
+        json_group_array(DISTINCT c.id) AS kids,
         (WITH RECURSIVE children (id, parent_id) as (
           SELECT sc1.id, sc1.parent_id
           FROM stories sc1
@@ -62,7 +62,7 @@ export default class StoriesRepository {
       ${domain ? sql`AND s.domain = ${domain}` : empty}
       ${title ? sql`AND s.title LIKE ${`%${title}%`}` : empty}
       GROUP BY s.id
-      ORDER BY ${list === 'top' ? sql`score DESC, descendants DESC,` : empty} created_at DESC
+      ORDER BY ${order === 'top' ? sql`score DESC, descendants DESC,` : empty} created_at DESC
       LIMIT ${raw(limit)} OFFSET ${raw(offset)}
     `);
 
@@ -92,7 +92,7 @@ export default class StoriesRepository {
         c.*,
         p.title AS root_title,
         u.username AS by,
-        json_group_array(s.id) AS kids,
+        json_group_array(DISTINCT s.id) AS kids,
         (SELECT COALESCE(SUM(weight), 0) FROM story_votes WHERE story_id = c.id) AS score
       FROM comments c
       JOIN users u ON c.user_id = u.id
@@ -111,7 +111,7 @@ export default class StoriesRepository {
       SELECT
         s.*,
         u.username AS by,
-        json_group_array(c.id) AS kids,
+        json_group_array(DISTINCT c.id) AS kids,
         (WITH RECURSIVE children (id, parent_id) as (
           SELECT sc1.id, sc1.parent_id
           FROM stories sc1
@@ -147,7 +147,7 @@ export default class StoriesRepository {
       SELECT
         s.*,
         u.username AS by,
-        json_group_array(c.id) AS kids,
+        json_group_array(DISTINCT c.id) AS kids,
         COALESCE(SUM(v.weight), 0) AS score
       FROM stories s
       JOIN users u ON s.user_id = u.id
@@ -173,7 +173,7 @@ export default class StoriesRepository {
       ) SELECT
         s.*,
         u.username AS by,
-        json_group_array(c.id) AS kids,
+        json_group_array(DISTINCT c.id) AS kids,
         COALESCE(SUM(v.weight), 0) AS score
       FROM stories s
       JOIN users u ON s.user_id = u.id

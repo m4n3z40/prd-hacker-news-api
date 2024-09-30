@@ -11,12 +11,18 @@ const newStorySchema = {
     url: {
       type: 'string',
       format: 'uri',
-      pattern: "^https?://"
+      pattern: "^https?://",
+      nullable: true,
+      default: null,
     },
     text: { type: 'string' },
     type: { enum: ['post', 'comment', 'job', 'ask', 'show'] },
     user_id: { type: 'integer' },
-    parent_id: { type: 'integer' },
+    parent_id: {
+      type: 'integer',
+      nullable: true,
+      default: null
+    },
   },
 };
 
@@ -41,6 +47,7 @@ const storySchema = {
     parent_id: { type: 'integer' },
     root_id: { type: 'integer' },
     root_title: { type: 'string' },
+    root_slug: { type: 'string' },
     kids: {
       type: 'array',
       items: { type: 'integer' },
@@ -57,7 +64,7 @@ const storiesListQuerySchema = {
     by: { type: 'string' },
     domain: { type: 'string' },
     title: { type: 'string' },
-    list: { type: 'string' },
+    order: { type: 'string' },
     perPage: { type: 'integer' },
     page: { type: 'integer' },
   },
@@ -167,7 +174,7 @@ export default async app => {
 
   app.get('/stories', getAllStoriesRouteConfig, async (request, reply) => {
     const { stories: storiesRepo } = app.repositories;
-    const { type, by, domain, title, list, perPage = 30, page = 1 } = request.query;
+    const { type, by, domain, title, order, perPage = 30, page = 1 } = request.query;
 
     const total = await storiesRepo.countAll({ type, by, domain, title });
 
@@ -175,7 +182,7 @@ export default async app => {
       return reply.send({ result: [], meta: { total, page, perPage } });
     }
 
-    const stories = await storiesRepo.getAll({ type, by, domain, title, list, perPage, page });
+    const stories = await storiesRepo.getAll({ type, by, domain, title, order, perPage, page });
 
     return reply.send({
       result: stories,
@@ -257,7 +264,10 @@ export default async app => {
 
     const rootKids = parentStory.kids;
 
-    return reply.send({ result: { stories: storiesMap, rootKids }, meta: { total: stories.length } });
+    return reply.send({
+      result: { stories: storiesMap, rootKids },
+      meta: { total: stories.length }
+    });
   });
 
   const rootRouteConfig = {
