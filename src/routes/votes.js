@@ -38,18 +38,18 @@ const errorSchema = {
   },
 };
 
+const createVoteSchema = {
+  body: newVoteSchema,
+  response: {
+    200: voteResponseSchema,
+    409: errorSchema,
+  },
+};
+
 /**
  * @param {import('fastify').FastifyInstance} app
  */
 export default async app => {
-  const createVoteSchema = {
-    body: newVoteSchema,
-    response: {
-      200: voteResponseSchema,
-      409: errorSchema,
-    },
-  };
-
   app.post('/votes', createVoteSchema, async (request, reply) => {
     const { votes: votesRepo } = app.repositories;
     const { user_id, story_id, action = 'up' } = request.body;

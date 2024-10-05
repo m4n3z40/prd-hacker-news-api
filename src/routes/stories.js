@@ -141,19 +141,59 @@ const errorSchema = {
   },
 };
 
+const createStoryRouteConfig = {
+  schema: {
+    body: newStorySchema,
+    response: {
+      200: singleStorySchema,
+    },
+  },
+};
+
+const getAllStoriesRouteConfig = {
+  schema: {
+    querystring: storiesListQuerySchema,
+    response: {
+      200: storiesListSchema
+    },
+  },
+};
+
+const getStoryRouteConfig = {
+  schema: {
+    params: storyPathParamsSchema,
+    response: {
+      200: singleStorySchema,
+      404: errorSchema,
+    },
+  },
+};
+
+const descendantsRouteConfig = {
+  schema: {
+    params: storyPathParamsSchema,
+    response: {
+      200: descendantsSchema,
+      404: errorSchema,
+    },
+  },
+};
+
+const rootRouteConfig = {
+  schema: {
+    params: storyPathParamsSchema,
+    response: {
+      200: singleStorySchema,
+      404: errorSchema,
+      400: errorSchema,
+    },
+  },
+};
+
 /**
  * @param {import('fastify').FastifyInstance} app
  */
 export default async app => {
-  const createStoryRouteConfig = {
-    schema: {
-      body: newStorySchema,
-      response: {
-        200: singleStorySchema,
-      },
-    },
-  };
-
   app.post('/stories', createStoryRouteConfig, async (request, reply) => {
     const { stories: storiesRepo } = app.repositories;
     const { title, url, text, type, user_id, parent_id } = request.body;
@@ -162,15 +202,6 @@ export default async app => {
 
     return reply.send({ result: story });
   });
-
-  const getAllStoriesRouteConfig = {
-    schema: {
-      querystring: storiesListQuerySchema,
-      response: {
-        200: storiesListSchema
-      },
-    },
-  };
 
   app.get('/stories', getAllStoriesRouteConfig, async (request, reply) => {
     const { stories: storiesRepo } = app.repositories;
@@ -208,16 +239,6 @@ export default async app => {
     });
   });
 
-  const getStoryRouteConfig = {
-    schema: {
-      params: storyPathParamsSchema,
-      response: {
-        200: singleStorySchema,
-        404: errorSchema,
-      },
-    },
-  };
-
   app.get('/stories/:id', getStoryRouteConfig, async (request, reply) => {
     const { id } = request.params;
     const { stories: storiesRepo } = app.repositories;
@@ -230,16 +251,6 @@ export default async app => {
 
     return reply.send({ result: story });
   });
-
-  const descendantsRouteConfig = {
-    schema: {
-      params: storyPathParamsSchema,
-      response: {
-        200: descendantsSchema,
-        404: errorSchema,
-      },
-    },
-  };
 
   app.get('/stories/:id/descendants', descendantsRouteConfig, async (request, reply) => {
     const { id } = request.params;
@@ -269,17 +280,6 @@ export default async app => {
       meta: { total: stories.length }
     });
   });
-
-  const rootRouteConfig = {
-    schema: {
-      params: storyPathParamsSchema,
-      response: {
-        200: singleStorySchema,
-        404: errorSchema,
-        400: errorSchema,
-      },
-    },
-  };
 
   app.get('/stories/:id/root', rootRouteConfig, async (request, reply) => {
     const { id } = request.params;

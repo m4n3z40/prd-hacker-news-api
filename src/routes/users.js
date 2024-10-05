@@ -45,18 +45,34 @@ const errorSchema = {
   },
 };
 
+const createUserSchema = {
+  body: newUserSchema,
+  response: {
+    200: userResponseSchema,
+    409: errorSchema,
+  },
+};
+
+const getUserSchema = {
+  params: getUserParamsSchema,
+  response: {
+    200: userResponseSchema,
+    404: errorSchema,
+  },
+};
+
+const authUserSchema = {
+  body: newUserSchema,
+  response: {
+    200: userResponseSchema,
+    401: errorSchema,
+  },
+};
+
 /**
  * @param {import('fastify').FastifyInstance} app
  */
 export default async app => {
-  const createUserSchema = {
-    body: newUserSchema,
-    response: {
-      200: userResponseSchema,
-      409: errorSchema,
-    },
-  };
-
   app.post('/users', createUserSchema, async (request, reply) => {
     const { username, password } = request.body;
     const { users: usersRepo } = app.repositories;
@@ -74,14 +90,6 @@ export default async app => {
     }
   });
 
-  const getUserSchema = {
-    params: getUserParamsSchema,
-    response: {
-      200: userResponseSchema,
-      404: errorSchema,
-    },
-  };
-
   app.get('/users/:username', getUserSchema, async (request, reply) => {
     const { username } = request.params;
     const { users: usersRepo } = app.repositories;
@@ -94,14 +102,6 @@ export default async app => {
 
     return reply.send({ result: user });
   });
-
-  const authUserSchema = {
-    body: newUserSchema,
-    response: {
-      200: userResponseSchema,
-      401: errorSchema,
-    },
-  };
 
   app.post('/users/auth', authUserSchema, async (request, reply) => {
     const { username, password } = request.body;
