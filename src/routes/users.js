@@ -46,26 +46,32 @@ const errorSchema = {
 };
 
 const createUserSchema = {
-  body: newUserSchema,
-  response: {
-    200: userResponseSchema,
-    409: errorSchema,
+  schema: {
+    body: newUserSchema,
+    response: {
+      200: userResponseSchema,
+      409: errorSchema,
+    },
   },
 };
 
 const getUserSchema = {
-  params: getUserParamsSchema,
-  response: {
-    200: userResponseSchema,
-    404: errorSchema,
+  schema: {
+    params: getUserParamsSchema,
+    response: {
+      200: userResponseSchema,
+      404: errorSchema,
+    },
   },
 };
 
 const authUserSchema = {
-  body: newUserSchema,
-  response: {
-    200: userResponseSchema,
-    401: errorSchema,
+  schema: {
+    body: newUserSchema,
+    response: {
+      200: userResponseSchema,
+      401: errorSchema,
+    },
   },
 };
 
@@ -83,7 +89,7 @@ export default async app => {
       return reply.send({ result: user });
     } catch (error) {
       if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-        return reply.status(409).send({ message: 'User with the same username already exists' });
+        return reply.status(409).send({ result: { message: 'User with the same username already exists' } });
       }
 
       throw error;

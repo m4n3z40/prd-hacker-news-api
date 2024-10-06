@@ -39,11 +39,13 @@ const errorSchema = {
 };
 
 const createVoteSchema = {
-  body: newVoteSchema,
-  response: {
-    200: voteResponseSchema,
-    409: errorSchema,
-  },
+  schema: {
+    body: newVoteSchema,
+    response: {
+      200: voteResponseSchema,
+      409: errorSchema,
+    },
+  }
 };
 
 /**
@@ -60,7 +62,7 @@ export default async app => {
       return reply.send({ result: vote });
     } catch (error) {
       if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-        return reply.status(409).send({ message: 'User already voted on this story' });
+        return reply.status(409).send({ result: { message: 'User already voted on this story' } });
       }
 
       throw error;

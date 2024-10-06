@@ -70,6 +70,14 @@ const storiesListQuerySchema = {
   },
 };
 
+const commentsListQuerySchema = {
+  type: 'object',
+  properties: {
+    perPage: { type: 'integer' },
+    page: { type: 'integer' },
+  },
+};
+
 const resultMetaSchema = {
   type: 'object',
   properties: {
@@ -221,7 +229,7 @@ export default async app => {
     });
   });
 
-  app.get('/comments', getAllStoriesRouteConfig, async (request, reply) => {
+  app.get('/comments', commentsListQuerySchema, async (request, reply) => {
     const { stories: storiesRepo } = app.repositories;
     const { perPage = 30, page = 1 } = request.query;
 
