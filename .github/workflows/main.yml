@@ -1,3 +1,5 @@
+name: Deployment
+
 on:
   push:
     branches:
@@ -5,6 +7,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: 
+      name: production
+      url: https://news.sbcschool.com.br
     steps:
       - uses: aws-actions/setup-sam@v2
       - uses: aws-actions/configure-aws-credentials@v1
