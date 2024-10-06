@@ -1,11 +1,14 @@
-import { createClient } from '@libsql/client';
 import fastifyPlugin from "fastify-plugin";
 
 let db = null;
 
-function getDb() {
+async function getDb() {
   if (!db) {
-    db = createClient({
+    const client = process.env.NODE_ENV === 'production'
+      ? await import('@libsql/client/web')
+      : await import('@libsql/client');
+
+    db = client.createClient({
       url: process.env.TURSO_DATABASE_URL,
       authToken: process.env.TURSO_DATABASE_TOKEN,
     });
@@ -17,5 +20,5 @@ function getDb() {
 export default getDb;
 
 export const plugin = fastifyPlugin(async (app) => {
-  app.decorate('db', getDb());
+  app.decorate('db', await getDb());
 });

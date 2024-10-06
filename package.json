@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --env-file=.env --watch ./main.js",
+    "prod": "node --env-file=.env.production ./main.js",
     "start": "node --env-file=.env ./main.js",
     "db:migrate": "node --env-file=.env ./src/db/migrate-phn-db.js"
   },

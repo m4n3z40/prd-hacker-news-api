@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Product Hacker News API
+
+  An API to handle the backend logic for the Product Hacker News application.
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  PRDHackerNews:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambda.handler
+      PackageType: Zip
+      Runtime: nodejs20.x
+      MemorySize: 256
+      Timeout: 500
+      Events:
+        AppEventAPI:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: any
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  AppEventAPI:
+    Description: "API Gateway endpoint URL for Prod stage for Product Hacker News function"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+  PRDHackerNews:
+    Description: "Product Hacker News Lambda Function ARN"
+    Value: !GetAtt PRDHackerNews.Arn
+  PRDHackerNewsIamRole:
+    Description: "Implicit IAM Role created for Product Hacker News function"
+    Value: !GetAtt PRDHackerNewsRole.Arn

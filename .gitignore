@@ -12,3 +12,6 @@ yarn-error.log
 phn.db
 phn.db-shm
 phn.db-wal
+
+# AWS
+.aws-sam/
