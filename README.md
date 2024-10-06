@@ -67,7 +67,7 @@ An API for the enhanced clone of [Hackernews](https://news.ycombinator.com) for 
 
 ## Database Structure
 
-![Database model structure](src/data/phn.png "Database model structure")
+![Database model structure](src/db/phn.png "Database model structure")
 
 ## Roadmap
 
