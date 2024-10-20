@@ -1,6 +1,6 @@
 {
   "name": "prd-hacker-news-api",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "O backend para um clone do hacker news com esteroides",
   "main": "main.js",
   "type": "module",
