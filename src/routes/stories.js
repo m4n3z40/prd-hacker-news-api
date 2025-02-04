@@ -114,6 +114,19 @@ const singleStorySchema = {
   },
 };
 
+const storySummarySchema = {
+  type: 'object',
+  properties: {
+    result: {
+      type: 'object',
+      properties: {
+        summary: { type: 'string' },
+        story: storySchema,
+      },
+    },
+  },
+};
+
 const descendantsSchema = {
   type: 'object',
   properties: {
@@ -172,6 +185,16 @@ const getStoryRouteConfig = {
     params: storyPathParamsSchema,
     response: {
       200: singleStorySchema,
+      404: errorSchema,
+    },
+  },
+};
+
+const getStorySummaryRouteConfig = {
+  schema: {
+    params: storyPathParamsSchema,
+    response: {
+      200: storySummarySchema,
       404: errorSchema,
     },
   },
@@ -258,6 +281,23 @@ export default async app => {
     }
 
     return reply.send({ result: story });
+  });
+
+  app.get('/stories/:id/summary', getStorySummaryRouteConfig, async (request, reply) => {
+    const { id } = request.params;
+    const { stories: storiesRepo, summaries: summariesRepo } = app.repositories;
+
+    const story = await storiesRepo.getById(id);
+
+    if (!story) {
+      return reply.code(404).send({ result: { message: 'Story not found' } });
+    }
+
+    const { summary } = await summariesRepo.getSummaryFor(story);
+
+    story.text = undefined;
+
+    return reply.send({ result: { summary, story } });
   });
 
   app.get('/stories/:id/descendants', descendantsRouteConfig, async (request, reply) => {

@@ -44,11 +44,20 @@ const createVotesTableSql = `
   );
 `;
 
+const createSummariesTableSql = `
+  CREATE TABLE IF NOT EXISTS summaries (
+    hash CHAR(64) PRIMARY KEY,
+    summary TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+`;
+
 async function runMigrations() {
   return turso.migrate([
     { sql: createUsersTableSql },
     { sql: createStoriesTableSql },
     { sql: createVotesTableSql },
+    { sql: createSummariesTableSql },
   ]);
 }
 
