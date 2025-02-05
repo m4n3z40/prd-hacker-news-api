@@ -35,7 +35,7 @@ export default class SummarizerAgent {
   constructor({ llm, selector, maxWords, targetAudience } = {}) {
     this.#llm = llm;
     this.#selector = selector || 'h1, h2, h3, h4, h5, h6, p, li';
-    this.#maxWords = maxWords || 400;
+    this.#maxWords = maxWords || 250;
     this.#targetAudience = targetAudience || 'product management';
 
     if (!llm) {
@@ -94,8 +94,9 @@ export default class SummarizerAgent {
         'Provide context where necessary and avoid excessive technical jargon or verbosity.',
         'The goal is to create a summary that effectively communicates the context\'s content while being easily digestible and engaging.',
         'Summary should NOT be more than {word_count} words for {target_audience} audience.',
-        'Summary should be written in Markdown format. With bullet points for key points and subpoints.',
+        'Summary should be structured in a hierarchy a bullet point list written in Markdown format.',
         'Use bold or italic formatting to highlight important information.',
+        'NEVER include personal opinions, prefixes, suffixes or unrelated information in the summary.',
         'CONTEXT: {context}',
         '\n---\n',
         'SUMMARY: \n',
